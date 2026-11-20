@@ -1,1 +1,375 @@
+<!DOCTYPE html>
 
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>La guimauve</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{margin:0;background:#fff8ef;color:#39291f;font-family:system-ui,sans-serif}
+
+header{background:#b85b30;color:white;padding:20px;text-align:center}
+
+header h1{margin:0;font-size:25px}
+
+header p{margin:5px 0 0}
+
+main{max-width:650px;margin:auto;padding:15px}
+
+section{background:white;border:1px solid #ecd9c8;border-radius:16px;padding:16px;margin-bottom:15px}
+
+h2{font-size:19px;margin:0 0 15px}
+
+h3{font-size:15px}
+
+button,select{font:inherit}
+
+button{border:0;border-radius:10px;padding:12px;cursor:pointer}
+
+.primary{background:#b85b30;color:white;width:100%;font-weight:bold;margin-top:15px}
+
+.secondary{background:#f3e6d9}
+
+.option{display:block;padding:11px;border:1px solid #eee0d2;border-radius:9px;margin:7px 0}
+
+.option input{margin-right:8px}
+
+.extra{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #eee}
+
+.counter{display:flex;align-items:center;gap:13px}
+
+.counter button{background:#f1e4d6;font-size:20px;width:40px;height:40px;padding:0}
+
+.price{font-size:24px;font-weight:bold;text-align:right;margin-top:15px}
+
+.order{border:1px solid #ead9c9;border-radius:12px;padding:13px;margin:10px 0}
+
+.muted{color:#806f63;font-size:13px}
+
+nav{display:flex;gap:8px;margin-bottom:15px}
+
+nav button{flex:1;background:#f0dfce}
+
+nav button.active{background:#b85b30;color:white}
+
+.hidden{display:none}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>La guimauve 🍡</h1>
+
+<p>焼きマシュマロ 注文管理</p>
+
+</header>
+
+<main>
+
+<nav>
+
+<button id="tabNew" class="active" onclick="showTab('new')">注文受付</button>
+
+<button id="tabOrders" onclick="showTab('orders')">注文一覧</button>
+
+<button id="tabSales" onclick="showTab('sales')">売上</button>
+
+</nav>
+
+<div id="new">
+
+<section>
+
+<h2>新しい注文</h2>
+
+<p class="muted">1回の会計で複数人分を登録できます。</p>
+
+<div id="items"></div>
+
+<button class="secondary" onclick="addItem()">＋ マシュマロを追加</button>
+
+<div class="price" id="total">合計 ¥0</div>
+
+<button class="primary" onclick="saveOrder()">会計確定・注文登録</button>
+
+</section>
+
+</div>
+
+<div id="orders" class="hidden">
+
+<section>
+
+<h2>注文一覧</h2>
+
+<div id="orderList"></div>
+
+</section>
+
+</div>
+
+<div id="sales" class="hidden">
+
+<section>
+
+<h2>売上集計</h2>
+
+<div id="salesContent"></div>
+
+</section>
+
+</div>
+
+</main>
+
+<script>
+
+const sauces=["チョコソース","マンゴーソース","ストロベリーソース"];
+
+const extras=[...sauces,"カラースプレー","クラッカー"];
+
+let items=[];
+
+let orders=JSON.parse(localStorage.getItem("guimauve_demo_orders")||"[]");
+
+function yen(n){return "¥"+n.toLocaleString("ja-JP")}
+
+function addItem(){
+
+ items.push({id:Date.now()+Math.random(),sauce:sauces[0],extras:[0,0,0,0,0]});
+
+ renderItems();
+
+}
+
+function removeItem(id){
+
+ if(items.length===1)return alert("最低1個必要です");
+
+ items=items.filter(x=>x.id!==id);
+
+ renderItems();
+
+}
+
+function setSauce(id,value){
+
+ items.find(x=>x.id===id).sauce=value;
+
+ renderItems();
+
+}
+
+function changeExtra(id,index,amount){
+
+ const item=items.find(x=>x.id===id);
+
+ item.extras[index]=Math.max(0,item.extras[index]+amount);
+
+ renderItems();
+
+}
+
+function itemPrice(item){
+
+ return 500+item.extras.reduce((a,b)=>a+b,0)*50;
+
+}
+
+function renderItems(){
+
+ const root=document.getElementById("items");
+
+ root.innerHTML="";
+
+ items.forEach((item,i)=>{
+
+  const div=document.createElement("div");
+
+  div.className="order";
+
+  let html=`<h3>マシュマロ ${i+1} <button class="secondary" onclick="removeItem(${item.id})">削除</button></h3>`;
+
+  html+="<p>基本ソース（1種類）</p>";
+
+  sauces.forEach(s=>{
+
+   html+=`<label class="option"><input type="radio" name="sauce${item.id}" ${item.sauce===s?"checked":""} onchange="setSauce(${item.id},'${s}')">${s}</label>`;
+
+  });
+
+  html+="<p>追加トッピング（各50円）</p>";
+
+  extras.forEach((e,j)=>{
+
+   html+=`<div class="extra"><span>${e}</span><div class="counter"><button onclick="changeExtra(${item.id},${j},-1)">−</button><b>${item.extras[j]}</b><button onclick="changeExtra(${item.id},${j},1)">＋</button></div></div>`;
+
+  });
+
+  html+=`<div class="price">${yen(itemPrice(item))}</div>`;
+
+  div.innerHTML=html;
+
+  root.appendChild(div);
+
+ });
+
+ document.getElementById("total").textContent="合計 "+yen(items.reduce((a,x)=>a+itemPrice(x),0));
+
+}
+
+function saveOrder(){
+
+ if(!items.length)return;
+
+ const total=items.reduce((a,x)=>a+itemPrice(x),0);
+
+ const order={
+
+  id:Date.now(),
+
+  time:new Date().toISOString(),
+
+  items:JSON.parse(JSON.stringify(items)),
+
+  total,
+
+  status:"受付済み"
+
+ };
+
+ orders.unshift(order);
+
+ localStorage.setItem("guimauve_demo_orders",JSON.stringify(orders));
+
+ items=[];
+
+ addItem();
+
+ alert("注文を登録しました！ 合計 "+yen(total));
+
+ showTab("orders");
+
+}
+
+function showTab(tab){
+
+ ["new","orders","sales"].forEach(t=>{
+
+  document.getElementById(t).classList.toggle("hidden",t!==tab);
+
+  document.getElementById("tab"+t[0].toUpperCase()+t.slice(1)).classList.toggle("active",t===tab);
+
+ });
+
+ if(tab==="orders")renderOrders();
+
+ if(tab==="sales")renderSales();
+
+}
+
+function renderOrders(){
+
+ const root=document.getElementById("orderList");
+
+ root.innerHTML="";
+
+ if(!orders.length){root.textContent="まだ注文はありません";return}
+
+ orders.forEach(o=>{
+
+  const div=document.createElement("div");
+
+  div.className="order";
+
+  const time=new Date(o.time).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+
+  let html=`<b>注文 #${String(o.id).slice(-5)}</b><p class="muted">${time} / ${o.items.length}個 / ${yen(o.total)}</p>`;
+
+  o.items.forEach((item,i)=>{
+
+   const added=item.extras.map((n,j)=>n?`${extras[j]}×${n}`:"").filter(Boolean);
+
+   html+=`<p>${i+1}. ${item.sauce}${added.length?"<br>追加："+added.join("、"):""}</p>`;
+
+  });
+
+  html+=`<button class="secondary" onclick="advanceOrder(${o.id})">${o.status} → 次へ</button>`;
+
+  div.innerHTML=html;
+
+  root.appendChild(div);
+
+ });
+
+}
+
+function advanceOrder(id){
+
+ const o=orders.find(x=>x.id===id);
+
+ const stages=["受付済み","調理中","完成"];
+
+ const index=stages.indexOf(o.status);
+
+ if(index<2)o.status=stages[index+1];
+
+ localStorage.setItem("guimauve_demo_orders",JSON.stringify(orders));
+
+ renderOrders();
+
+}
+
+function renderSales(){
+
+ const root=document.getElementById("salesContent");
+
+ const total=orders.reduce((a,o)=>a+o.total,0);
+
+ const count=orders.reduce((a,o)=>a+o.items.length,0);
+
+ let html=`<p>売上合計：<b>${yen(total)}</b></p><p>注文組数：${orders.length}組</p><p>販売個数：${count}個</p><h3>時間帯別売上</h3>`;
+
+ const hours={};
+
+ orders.forEach(o=>{
+
+  const h=new Date(o.time).getHours();
+
+  if(!hours[h])hours[h]={sales:0,count:0};
+
+  hours[h].sales+=o.total;
+
+  hours[h].count+=o.items.length;
+
+ });
+
+ Object.keys(hours).sort((a,b)=>a-b).forEach(h=>{
+
+  html+=`<p>${h}:00〜${Number(h)+1}:00　${yen(hours[h].sales)}（${hours[h].count}個）</p>`;
+
+ });
+
+ root.innerHTML=html;
+
+}
+
+addItem();
+
+</script>
+
+</body>
+
+</html>
